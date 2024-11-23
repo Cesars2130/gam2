@@ -63,6 +63,7 @@ const GameController = {
     this.ctx.fillStyle = "red";
     this.ctx.textAlign = "center";
     this.ctx.fillText("Game Over", this.canvas.width / 2, this.canvas.height / 2);
+    this.ctx.fillText(`Score ${this.score}`,this.canvas.width / 2, this.canvas.height / 1.7)
 
     console.log("Game Over: Todos los mineros han sido destruidos.");
   },
@@ -156,17 +157,27 @@ const GameController = {
     updateSpikeBall();
   },
 
-  startTimer: function() {
+  startTimer: function () {
     const timerWorker = this.concurrentTasks.addWorker("../infrestructure/workers/timeWorker.js");
-    
+  
+    let elapsedSeconds = 0;
+  
     this.concurrentTasks.setWorkerListener(this.concurrentTasks.workers.length - 1, (event) => {
       const formattedTime = event.data;
       document.getElementById("time").innerText = formattedTime;
+  
+      // Incrementa el contador de segundos
+      elapsedSeconds++;
+  
+      // Verifica si se alcanzan los dos minutos (120 segundos)
+      if (elapsedSeconds >= 120) {
+        this.endGame();
+      }
     });
-    
+  
     timerWorker.postMessage({});
   },
-
+  
   addClicker: function() {
     if (this.score >= this.clickerPrice) {
       this.score -= this.clickerPrice;
@@ -311,50 +322,42 @@ const GameController = {
   
   render: function () {
     if (this.gameOver) return;
-
+  
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
+  
     // Dibujar fondo
     if (Resources.images.bg) {
       this.ctx.drawImage(Resources.images.bg, 0, 0, this.canvas.width, this.canvas.height);
     }
-
+  
     // Dibujar base
     if (Resources.images.base) {
       this.ctx.drawImage(Resources.images.base, this.base.x, this.base.y, this.base.size, this.base.size);
     }
-
+  
     // Dibujar minas
     this.mines.forEach(mine => {
       if (Resources.images.mine) {
         this.ctx.drawImage(Resources.images.mine, mine.x, mine.y, mine.size, mine.size);
       }
     });
-
+  
     // Dibujar minions
-    this.minions.forEach((minion, index) => {
+    this.minions.forEach((minion) => {
       if (Resources.images.minion) {
         // Dibujar minion
         this.ctx.drawImage(Resources.images.minion, minion.x, minion.y, minion.size, minion.size);
-        
+  
         // Dibujar indicador de oro
         if (minion.hasGold) {
           this.ctx.fillStyle = "gold";
           this.ctx.beginPath();
-          this.ctx.arc(minion.x + minion.size/2, minion.y - 5, 3, 0, Math.PI * 2);
+          this.ctx.arc(minion.x + minion.size / 2, minion.y - 5, 3, 0, Math.PI * 2);
           this.ctx.fill();
         }
-
-        // Debug: dibujar línea hacia el objetivo
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
-        this.ctx.moveTo(minion.x + minion.size/2, minion.y + minion.size/2);
-        const target = minion.state === "goingToMine" ? minion.assignedMine : this.base;
-        this.ctx.lineTo(target.x + target.size/2, target.y + target.size/2);
-        this.ctx.stroke();
       }
     });
-
+  
     // Dibujar clickers con animación
     this.clickers.forEach(clicker => {
       // Actualizar animación
@@ -365,17 +368,17 @@ const GameController = {
           clicker.animating = false;
         }
       }
-
+  
       const scaledSize = clicker.size * clicker.scale;
       const offsetX = (scaledSize - clicker.size) / 2;
       const offsetY = (scaledSize - clicker.size) / 2;
-
+  
       this.ctx.beginPath();
       this.ctx.fillStyle = 'rgba(0, 0, 255, 0.6)';
       this.ctx.arc(
-        clicker.x + clicker.size/2 - offsetX, 
-        clicker.y + clicker.size/2 - offsetY, 
-        scaledSize/2, 
+        clicker.x + clicker.size / 2 - offsetX, 
+        clicker.y + clicker.size / 2 - offsetY, 
+        scaledSize / 2, 
         0, 
         Math.PI * 2
       );
@@ -387,17 +390,18 @@ const GameController = {
       this.ctx.textAlign = 'center';
       this.ctx.fillText(
         clicker.clicks, 
-        clicker.x + clicker.size/2,
-        clicker.y + clicker.size/2
+        clicker.x + clicker.size / 2,
+        clicker.y + clicker.size / 2
       );
     });
-
+  
+    // Dibujar bolas con picos
     this.spikeBalls.forEach((ball) => {
       this.ctx.beginPath();
       this.ctx.arc(ball.x + ball.size / 2, ball.y + ball.size / 2, ball.size / 2, 0, Math.PI * 2);
       this.ctx.fillStyle = "red";
       this.ctx.fill();
-
+  
       const spikes = 8;
       const spikeLength = 10;
       this.ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
@@ -408,14 +412,14 @@ const GameController = {
         const y1 = ball.y + ball.size / 2 + Math.sin(angle) * ball.size / 2;
         const x2 = x1 + Math.cos(angle) * spikeLength;
         const y2 = y1 + Math.sin(angle) * spikeLength;
-
+  
         this.ctx.beginPath();
         this.ctx.moveTo(x1, y1);
         this.ctx.lineTo(x2, y2);
         this.ctx.stroke();
       }
     });
-  },
+  },  
 
   startConcurrentTasks: function() {
     console.log('Starting render loop');
