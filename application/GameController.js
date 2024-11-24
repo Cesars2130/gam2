@@ -22,12 +22,15 @@ const GameController = {
   spikeBallWorkers: [],
   spikeBallSpawner: null,
   gameOver: false, // Nueva bandera para manejar el estado del juego
+  
+  
 
   init: function (canvasElement) {
     this.canvas = canvasElement;
     this.ctx = this.canvas.getContext("2d");
     this.concurrentTasks = new ConcurrentTasks();
     this.gameOver = false;
+    
 
     // Crear base y minas
     this.base = GameLogic.createBase(600, 300, 150);
@@ -178,17 +181,23 @@ const GameController = {
     timerWorker.postMessage({});
   },
   
-  addClicker: function() {
+  addClicker: function () {
+    // Verifica si ya hay un clicker activo
+    if (this.clickers.length > 0) {
+      console.log("Ya existe un Clicker activo.");
+      return;
+    }
+  
     if (this.score >= this.clickerPrice) {
       this.score -= this.clickerPrice;
       this.updateGoldCount();
-
+  
       const clicker = GameLogic.createClicker(this.canvas.width, this.canvas.height);
       clicker.scale = 1; // Para la animación
       clicker.animating = false;
       this.clickers.push(clicker);
       
-      // Create and configure worker
+      // Crear y configurar worker
       const worker = this.concurrentTasks.addWorker("../infrestructure/workers/clickerWorker.js");
       this.clickerWorkers.push(worker);
       const clickerIndex = this.clickers.length - 1;
@@ -213,13 +222,16 @@ const GameController = {
           }
         }
       });
-
-      // Start the worker
+  
+      // Iniciar el worker
       this.concurrentTasks.sendToWorker(workerIndex, {
         clicker: clicker
       });
+    } else {
+      console.log("No tienes suficiente oro para comprar un Clicker.");
     }
   },
+  
 
   addMinion: function (isFirst = false) {
     if (isFirst || (this.minions.length < this.maxMinions && this.score >= this.minionPrice)) {
